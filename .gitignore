@@ -1,0 +1,23 @@
+# ===== C# / .NET =====
+**/bin/
+**/obj/
+**/*.user
+**/*.suo
+.vs/
+*.userprefs
+
+
+# ===== Python =====
+recommenderSystem/venv/
+recommenderSystem/__pycache__/
+recommenderSystem/*.pyc
+recommenderSystem/.env
+recommenderSystem/*.db
+
+
+# ===== Općenito =====
+.env
+*.env
+*.log
+.DS_Store
+Thumbs.db

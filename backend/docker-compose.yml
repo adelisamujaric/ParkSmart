@@ -1,0 +1,159 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-CU13-ubuntu-22.04
+    container_name: sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: ${SA_PASSWORD}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+
+  userservice:
+    build:
+      context: .
+      dockerfile: UserWebAPI/Dockerfile
+    ports:
+      - "5072:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      DOTNET_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=220199_Users;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;"
+      JwtSettings__Key: ${JWT_SECRET}
+      EmailSettings__From: ${EMAIL_FROM}
+      EmailSettings__Password: ${EMAIL_PASSWORD}
+      RabbitMQ__Host: rabbitmq
+      InternalServices__ApiKey: ${INTERNAL_API_KEY}
+    depends_on:
+      sqlserver:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  parkingservice:
+    build:
+      context: .
+      dockerfile: ParkingService/Dockerfile
+    ports:
+      - "5148:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      DOTNET_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=220199_Parking;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;"
+      JwtSettings__Key: ${JWT_SECRET}
+      RabbitMQ__Host: rabbitmq
+      ServiceUrls__UserService: http://userservice:8080
+      InternalServices__ApiKey: ${INTERNAL_API_KEY}
+    depends_on:
+      sqlserver:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      userservice:
+        condition: service_started
+
+  paymentservice:
+    build:
+      context: .
+      dockerfile: PaymentService.WebAPI/Dockerfile
+    ports:
+      - "5038:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      DOTNET_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=220199_Payment;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;"
+      StripeSettings__SecretKey: ${STRIPE_SECRET}
+      StripeSettings__PublishableKey: ${STRIPE_PUBLISHABLE}
+      RabbitMQ__Host: rabbitmq
+    depends_on:
+      sqlserver:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  notificationservice:
+    build:
+      context: .
+      dockerfile: NotificationService.WebAPI/Dockerfile
+    ports:
+      - "5175:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      DOTNET_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=220199_Notifications;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;"
+      RabbitMQ__Host: rabbitmq
+    depends_on:
+      sqlserver:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  reportingservice:
+    build:
+      context: .
+      dockerfile: ReportingService.WebAPI/Dockerfile
+    ports:
+      - "5113:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      DOTNET_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=220199_Parking;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;"
+      JwtSettings__Key: ${JWT_SECRET}
+    depends_on:
+      sqlserver:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  detectionservice:
+    build:
+      context: .
+      dockerfile: DetectionService.WebAPI/Dockerfile
+    ports:
+      - "5164:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      DOTNET_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=220199_Detections;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;"
+      JwtSettings__Key: ${JWT_SECRET}
+      MLService__BaseUrl: http://recommender:8001
+      ParkingService__BaseUrl: http://parkingservice:8080
+      RabbitMQ__Host: rabbitmq
+      InternalServices__ApiKey: ${INTERNAL_API_KEY}
+    depends_on:
+      sqlserver:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      parkingservice:
+        condition: service_started
+
+  recommender:
+    build:
+      context: ../recommenderSystem
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      DB_CONNECTION: "mssql+pyodbc://sa:${SA_PASSWORD}@sqlserver/220199_Parking?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes"
+    depends_on:
+      sqlserver:
+        condition: service_started
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sqlserver_data:
