@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import '../../detections/models/camera.dart';
 import '../../detections/services/detection_service.dart';
@@ -279,12 +283,41 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _CameraPreviewDialog extends StatelessWidget {
+class _CameraPreviewDialog extends StatefulWidget {
   final Camera camera;
   final VoidCallback onStatusChanged;
-  final _detectionService = DetectionService();
 
-  _CameraPreviewDialog({required this.camera, required this.onStatusChanged});
+  const _CameraPreviewDialog({required this.camera, required this.onStatusChanged});
+
+  @override
+  State<_CameraPreviewDialog> createState() => _CameraPreviewDialogState();
+}
+
+class _CameraPreviewDialogState extends State<_CameraPreviewDialog> {
+  final _detectionService = DetectionService();
+  Timer? _timer;
+  Uint8List? _imageBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchFrame();
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchFrame());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchFrame() async {
+    final data = await _detectionService.getLatestFrame('/latest');
+    if (data != null && mounted) {
+      final Uint8List bytes = base64Decode(data['annotated_image']);
+      setState(() => _imageBytes = bytes);
+    }
+  }
 
   String _cameraTypeLabel(String type) {
     switch (type.toLowerCase()) {
@@ -313,21 +346,21 @@ class _CameraPreviewDialog extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'KAMERA #${camera.number}',
+                        'KAMERA #${widget.camera.number}',
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
-                      Text(camera.lotName, style: const TextStyle(color: Colors.grey)),
+                      Text(widget.camera.lotName, style: const TextStyle(color: Colors.grey)),
                       const SizedBox(height: 16),
                       const Text('Status:', style: TextStyle(color: Colors.grey)),
                       Text(
-                        camera.status.toLowerCase() == 'active' ? 'Aktivno' : 'Offline',
+                        widget.camera.status.toLowerCase() == 'active' ? 'Aktivno' : 'Offline',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       const SizedBox(height: 8),
                       const Text('Tip:', style: TextStyle(color: Colors.grey)),
                       Text(
-                        _cameraTypeLabel(camera.cameraType),
+                        _cameraTypeLabel(widget.camera.cameraType),
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ],
@@ -346,7 +379,9 @@ class _CameraPreviewDialog extends StatelessWidget {
                         child: Container(
                           height: 160,
                           color: Colors.grey.shade300,
-                          child: const Center(
+                          child: _imageBytes != null
+                              ? Image.memory(_imageBytes!, fit: BoxFit.cover, width: double.infinity)
+                              : const Center(
                             child: Icon(Icons.videocam_off, size: 48, color: Colors.grey),
                           ),
                         ),
@@ -357,15 +392,14 @@ class _CameraPreviewDialog extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            // Dugmad
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      await _detectionService.updateCameraStatus(camera.id, 0);
+                      await _detectionService.updateCameraStatus(widget.camera.id, 0);
                       Navigator.pop(context);
-                      onStatusChanged();
+                      widget.onStatusChanged();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF27AE60),
@@ -380,9 +414,9 @@ class _CameraPreviewDialog extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      await _detectionService.updateCameraStatus(camera.id, 1);
+                      await _detectionService.updateCameraStatus(widget.camera.id, 1);
                       Navigator.pop(context);
-                      onStatusChanged();
+                      widget.onStatusChanged();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFE74C3C),
@@ -406,6 +440,8 @@ class _CameraPreviewDialog extends StatelessWidget {
     );
   }
 }
+
+
 class _AddCameraDialog extends StatefulWidget {
   final VoidCallback onCameraAdded;
 

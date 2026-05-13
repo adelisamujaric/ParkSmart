@@ -3,6 +3,9 @@ import '../../detections/models/drone.dart';
 import '../../detections/services/detection_service.dart';
 import '../../parking/models/parking_lot.dart';
 import '../../parking/services/parking_lot_service.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 class DranoviScreen extends StatefulWidget {
   const DranoviScreen({super.key});
@@ -265,12 +268,42 @@ class _StatCard extends StatelessWidget {
   }
 }
 //---------------------------------------------------------------------------------------------------------
-class _DronePreviewDialog extends StatelessWidget {
+class _DronePreviewDialog extends StatefulWidget {
   final Drone drone;
   final VoidCallback onStatusChanged;
-  final _detectionService = DetectionService();
 
-  _DronePreviewDialog({required this.drone, required this.onStatusChanged});
+  const _DronePreviewDialog({required this.drone, required this.onStatusChanged});
+
+  @override
+  State<_DronePreviewDialog> createState() => _DronePreviewDialogState();
+}
+
+class _DronePreviewDialogState extends State<_DronePreviewDialog> {
+  final _detectionService = DetectionService();
+  Timer? _timer;
+  Uint8List? _imageBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchFrame();
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchFrame());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchFrame() async {
+    final data = await _detectionService.getLatestFrame('/latest_drone');
+    if (data != null && mounted) {
+      final Uint8List bytes = base64Decode(data['annotated_image']);
+      setState(() => _imageBytes = bytes);
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -285,23 +318,22 @@ class _DronePreviewDialog extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Lijevo - info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'DRON #${drone.number}',
+                        'DRON #${widget.drone.number}',
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
-                      Text(drone.lotName, style: const TextStyle(color: Colors.grey)),
+                      Text(widget.drone.lotName, style: const TextStyle(color: Colors.grey)),
                       const SizedBox(height: 16),
-                      _InfoRow('Status:', drone.status),
+                      _InfoRow('Status:', widget.drone.status),
                       const SizedBox(height: 8),
-                      _InfoRow('Nivo baterije:', '${drone.batteryLevel}%'),
+                      _InfoRow('Nivo baterije:', '${widget.drone.batteryLevel}%'),
                       const SizedBox(height: 8),
-                      _InfoRow('Vrijeme do punjenja:', _calculateTimeToCharge(drone.batteryLevel, drone.status)),
+                      _InfoRow('Vrijeme do punjenja:', _calculateTimeToCharge(widget.drone.batteryLevel, widget.drone.status)),
                     ],
                   ),
                 ),
@@ -318,7 +350,10 @@ class _DronePreviewDialog extends StatelessWidget {
                         child: Container(
                           height: 160,
                           color: Colors.grey.shade300,
-                          child: const Center(
+
+                          child: _imageBytes != null
+                              ? Image.memory(_imageBytes!, fit: BoxFit.cover, width: double.infinity)
+                              : const Center(
                             child: Icon(Icons.videocam_off, size: 48, color: Colors.grey),
                           ),
                         ),
@@ -339,15 +374,14 @@ class _DronePreviewDialog extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            // Dugmad
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      await _detectionService.updateDroneStatus(drone.id, 0);
+                      await _detectionService.updateDroneStatus(widget.drone.id, 0);
                       Navigator.pop(context);
-                      onStatusChanged();
+                      widget.onStatusChanged();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF27AE60),
@@ -362,9 +396,9 @@ class _DronePreviewDialog extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      await _detectionService.updateDroneStatus(drone.id, 1);
+                      await _detectionService.updateDroneStatus(widget.drone.id, 1);
                       Navigator.pop(context);
-                      onStatusChanged();
+                      widget.onStatusChanged();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFF39C12),
@@ -379,9 +413,9 @@ class _DronePreviewDialog extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      await _detectionService.updateDroneStatus(drone.id, 2);
+                      await _detectionService.updateDroneStatus(widget.drone.id, 2);
                       Navigator.pop(context);
-                      onStatusChanged();
+                      widget.onStatusChanged();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFE74C3C),
@@ -391,7 +425,8 @@ class _DronePreviewDialog extends StatelessWidget {
                     ),
                     child: const Text('Isključi'),
                   ),
-                ),TextButton(
+                ),
+                TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text('Back'),
                 ),

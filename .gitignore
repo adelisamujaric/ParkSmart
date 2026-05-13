@@ -15,9 +15,43 @@ recommenderSystem/.env
 recommenderSystem/*.db
 
 
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+venv/
+env/
+.env
+
+# IDE
+.idea/
+.vscode/
+
+# YOLO training outputs
+runs/
+static/
+
+# Datasets (large files)
+dataset/
+dataset_yolo_with_images/
+
+# Model weights
+yolov8n.pt
+# best.pt se commituje
+*.pth
+*.onnx
+
+
+# OS
+.DS_Store
+Thumbs.db
+
+
 # ===== Općenito =====
 .env
 *.env
 *.log
 .DS_Store
 Thumbs.db
+

@@ -263,8 +263,6 @@ public class ParkingTicketService
         if (ticket.SpotId != null)
             await _parkingSpotRepository.UpdateStatusAsync(ticket.SpotId.Value, ParkingSpotStatus.Available);
 
-
-        // Stavi:
         await _publisher.PublishAsync(RabbitMQConstants.TicketClosedQueue, new TicketClosedMessage
         {
             TicketId = updated.Id,

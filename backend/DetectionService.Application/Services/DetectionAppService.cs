@@ -273,6 +273,7 @@ namespace DetectionService.Application.Services
                 CreatedAt = DateTime.UtcNow,
                 DroneNumber = request.DroneNumber,
                 CameraNumber = request.CameraNumber,
+                ImageUrl = request.ImageUrl,
                 ViolationConfigId = request.ViolationConfigId,
             };
 

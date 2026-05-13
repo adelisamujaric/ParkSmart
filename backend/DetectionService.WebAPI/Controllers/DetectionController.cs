@@ -66,8 +66,11 @@ namespace DetectionService.WebAPI.Controllers
             return Ok(logs);
         }
         //------------------------------------------------------------------------------------------------------------------
+        // This endpoint is intentionally left without authorization.
+        // Cameras are hardware devices that cannot authenticate via JWT.
+        // In production, this should be secured with an API Key mechanism.
         [HttpPost("manual")]
-        [Authorize(Roles = Roles.Admin)]
+        //[Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> CreateManualLog([FromBody] CreateDetectionLogDto request)
         {
             var result = await _detectionService.CreateManualLogAsync(request);

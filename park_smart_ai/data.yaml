@@ -1,0 +1,16 @@
+path: C:\Users\adeli\PycharmProjects\park_smart_ai\dataset
+train: images/train
+val: images/valid
+test: images/test
+
+nc: 9
+names:
+  - auto
+  - invalid_oznaka
+  - invalidsko_mjesto
+  - parking_spot
+  - pravilno_parkirano
+  - prekrsaj_invalidsko
+  - prekrsaj_nije_parking
+  - prekrsaj_van_okvira
+  - tablica

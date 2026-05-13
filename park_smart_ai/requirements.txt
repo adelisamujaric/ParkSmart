@@ -1,0 +1,7 @@
+ultralytics
+easyocr
+fastapi
+uvicorn
+pillow
+opencv-python
+streamlit

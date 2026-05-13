@@ -90,4 +90,17 @@ class DetectionService {
       data: data,
     );
   }
+
+  Future<Map<String, dynamic>?> getLatestFrame(String endpoint) async {
+    try {
+      final response = await Dio().get('http://localhost:8000$endpoint');
+      if (response.data['available'] == true) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
 }

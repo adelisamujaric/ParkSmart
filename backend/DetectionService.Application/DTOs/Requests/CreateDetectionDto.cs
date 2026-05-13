@@ -10,6 +10,7 @@ namespace DetectionService.Application.DTOs.Requests
         public int? DroneNumber { get; set; }
         public int? CameraNumber { get; set; }
         public string LicensePlate { get; set; } = string.Empty;
+        public string? ImageUrl { get; set; }
         public Guid? ViolationConfigId { get; set; }
 
 
